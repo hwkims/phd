@@ -1,6 +1,5 @@
 ![image](https://github.com/user-attachments/assets/dbd711bf-b004-4c38-88ca-d6071473ff1c)
-![다운로드 (1)](https://github.com/user-attachments/assets/f10c749e-f7e2-4d20-87fb-420b1e2428b6)
-![다운로드](https://github.com/user-attachments/assets/290f5243-1faa-45b7-9ef4-436464bbc53a)
+
 https://kospi.duckdns.org/
 
 ## 🧠 마음챙김 챗봇 (Mindful Chatbot) - 팀 "포옹" 🤗
@@ -134,7 +133,7 @@ phd/
 
 ### 📄 라이선스
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. ( *`LICENSE` 파일은 아직 없으므로, 필요하다면 추가해야 합니다.*)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
 
 ### 📞 연락처
 
@@ -144,3 +143,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Disclaimer:** 이 챗봇은 심리 상담 전문가를 대체할 수 없으며, 의학적 진단이나 치료를 제공하지 않습니다.  심각한 정신 건강 문제가 있는 경우 반드시 전문가와 상담하세요.
+
+![다운로드 (1)](https://github.com/user-attachments/assets/f10c749e-f7e2-4d20-87fb-420b1e2428b6)
+![다운로드](https://github.com/user-attachments/assets/290f5243-1faa-45b7-9ef4-436464bbc53a)
