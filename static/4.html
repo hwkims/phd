@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정신과 상담 챗봇</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👩‍⚕️</text></svg>">
+    <!-- OpenLayers CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.4.0/ol.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+
+        /* 패널 공통 스타일 */
+        .panel {
+            position: fixed;
+            top: 0;
+            height: 100%;
+            width: 300px;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
+        }
+
+        .left-panel {
+            left: 0;
+            transform: translateX(-100%);
+        }
+
+        .right-panel {
+            right: 0;
+            transform: translateX(100%);
+        }
+
+        .left-panel.open, .right-panel.open {
+            transform: translateX(0);
+        }
+
+        /* 패널 버튼 */
+        .panel-toggle {
+            position: fixed;
+            top: 10px;
+            z-index: 2000;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #left-toggle {
+            left: 10px;
+        }
+
+        #right-toggle {
+            right: 10px;
+        }
+
+        /* 채팅 컨테이너 */
+        .chat-container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            flex-grow: 1;
+            margin: 70px auto 0;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            max-width: 70%;
+            display: inline-block;
+            clear: both;
+            position: relative;
+            transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+        }
+
+        .message.new-message {
+            transform: translateY(10px);
+            opacity: 0;
+        }
+
+        .message.new-message.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .user-message {
+            background-color: #007aff;
+            color: white;
+            float: right;
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant-message {
+            background-color: #e5e5ea;
+            color: black;
+            float: left;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* 입력 컨테이너 */
+        #input-container {
+            display: flex;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-top: 1px solid #ccc;
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            margin-right: 5px;
+            outline: none;
+            background-color: white;
+            font-size: 15px;
+        }
+
+        #send-button, #mic-button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            cursor: pointer;
+            outline: none;
+            font-size: 15px;
+        }
+
+        #mic-button {
+            background-color: transparent;
+            color: #007aff;
+            font-size: 24px;
+            margin-right: 5px;
+        }
+
+        #send-button {
+            font-size: 20px;
+            padding: 10px 14px;
+            line-height: 1;
+        }
+
+        audio {
+            width: 70%;
+            margin-top: 5px;
+            display: block;
+        }
+
+        /* PC에서의 반응형 디자인 */
+        @media (min-width: 768px) {
+            .panel {
+                position: static;
+                transform: translateX(0);
+            }
+
+            .panel-toggle {
+                display: none;
+            }
+
+            .container {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+
+            .chat-container {
+                margin: 0;
+                flex: 1;
+                max-width: calc(100% - 600px);
+            }
+        }
+
+        /* 지도와 그래프 스타일 */
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #mental-graph {
+            width: 100%;
+            height: 300px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 패널 토글 버튼 -->
+    <button id="left-toggle" class="panel-toggle">분석</button>
+    <button id="right-toggle" class="panel-toggle">지도</button>
+
+    <!-- 왼쪽 패널: 정신 건강 분석 -->
+    <div id="left-panel" class="panel left-panel">
+        <h2>정신 건강 분석</h2>
+        <canvas id="mental-graph"></canvas>
+    </div>
+
+    <!-- 중앙 채팅 -->
+    <div class="container">
+        <div class="chat-container">
+            <div id="chat-log"></div>
+        </div>
+    </div>
+
+    <!-- 오른쪽 패널: 지도 -->
+    <div id="right-panel" class="panel right-panel">
+        <h2>한국 정신과 병원</h2>
+        <div id="map"></div>
+    </div>
+
+    <!-- 입력창 -->
+    <div id="input-container">
+        <button id="mic-button">🎤</button>
+        <input type="text" id="user-input" placeholder="메시지를 입력하세요..." autofocus>
+        <button id="send-button">➤</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ol@v10.4.0/dist/ol.js"></script>
+    <script>
+    const API_SERVER_URL = "https://kospi.duckdns.org";
+    const doctors = {
+        doctor1: { name: "Dr. Nova", voice: "nova", image: "doctor1.jpg", greeting: "안녕하세요! 저는 Dr. Nova입니다. 어떤 고민이 있으신가요?" },
+        doctor2: { name: "Dr. Shimmer", voice: "shimmer", image: "doctor2.jpg", greeting: "안녕하세요, Dr. Shimmer입니다. 편안하게 말씀해주세요." },
+        doctor3: { name: "Dr. Fable", voice: "fable", image: "doctor3.jpg", greeting: "안녕하세요! Dr. Fable입니다. 무슨 일이든 저에게 이야기해주세요." },
+    };
+    let selectedDoctor = "doctor1";
+    let chatHistory = [];
+
+    const chatLog = document.getElementById('chat-log');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const micButton = document.getElementById('mic-button');
+    const leftPanel = document.getElementById('left-panel');
+    const rightPanel = document.getElementById('right-panel');
+    const leftToggle = document.getElementById('left-toggle');
+    const rightToggle = document.getElementById('right-toggle');
+
+    // 패널 토글
+    leftToggle.addEventListener('click', () => leftPanel.classList.toggle('open'));
+    rightToggle.addEventListener('click', () => rightPanel.classList.toggle('open'));
+
+    // 메시지 표시
+    function displayMessage(message, role, audioUrl = null) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', role === 'user' ? 'user-message' : 'assistant-message');
+        messageDiv.textContent = message;
+        if (role === 'assistant' && audioUrl) {
+            const audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.src = audioUrl;
+            audioElement.autoplay = true;
+            messageDiv.appendChild(audioElement);
+        }
+        messageDiv.classList.add('new-message');
+        chatLog.appendChild(messageDiv);
+        chatLog.scrollTop = chatLog.scrollHeight;
+        void messageDiv.offsetWidth;
+        messageDiv.classList.add('show');
+    }
+
+    // 챗봇 응답 및 TTS
+    async function getResponseAndTTS(userMessage) {
+        try {
+            const chatResponse = await fetch(`${API_SERVER_URL}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_message: userMessage, selected_doctor: selectedDoctor })
+            });
+            if (!chatResponse.ok) throw new Error(`Chat API 호출 실패: ${chatResponse.status}`);
+            const chatData = await chatResponse.json();
+            const chatbotResponse = chatData.response;
+
+            chatHistory.push({ user: userMessage, assistant: chatbotResponse });
+            updateMentalAnalysis();
+
+            let audioUrl = null;
+            if (isRecording) {
+                const ttsResponse = await fetch(`${API_SERVER_URL}/tts`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_message: chatbotResponse, selected_doctor: selectedDoctor })
+                });
+                if (!ttsResponse.ok) throw new Error(`TTS API 호출 실패: ${ttsResponse.status}`);
+                const ttsData = await ttsResponse.json();
+                const audioData = base64ToArrayBuffer(ttsData.audio);
+                const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
+                audioUrl = URL.createObjectURL(audioBlob);
+            }
+
+            return { chatbotResponse, audioUrl };
+        } catch (error) {
+            console.error("응답 또는 TTS 오류:", error);
+            displayMessage("죄송합니다. 응답을 생성하는 데 문제가 발생했습니다.", "assistant");
+            return { chatbotResponse: null, audioUrl: null };
+        }
+    }
+
+    function base64ToArrayBuffer(base64) {
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+        return bytes.buffer;
+    }
+
+    // 정신 건강 분석 업데이트 (가정: 서버에서 JSON 반환)
+    async function updateMentalAnalysis() {
+        try {
+            const response = await fetch(`${API_SERVER_URL}/analyze_mental_health`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_history: chatHistory })
+            });
+            const data = await response.json();
+            const scores = data.scores; // 예: { stress: 70, anxiety: 50, depression: 30 }
+
+            const ctx = document.getElementById('mental-graph').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(scores),
+                    datasets: [{
+                        label: '정신 건강 점수',
+                        data: Object.values(scores),
+                        backgroundColor: ['#ff6384', '#36a2eb', '#ffce56']
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true, max: 100 } } }
+            });
+        } catch (error) {
+            console.error("정신 건강 분석 오류:", error);
+        }
+    }
+
+    // OpenLayers 지도 초기화
+    function initMap() {
+        navigator.geolocation.getCurrentPosition(position => {
+            const userLon = position.coords.longitude;
+            const userLat = position.coords.latitude;
+
+            const map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({ source: new ol.source.OSM() })
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([userLon, userLat]),
+                    zoom: 12
+                })
+            });
+
+            // 한국 정신과 병원 마커 추가 (예시 데이터)
+            const hospitals = [
+                { name: "서울 정신과", lon: 126.975, lat: 37.566 },
+                { name: "부산 정신과", lon: 129.075, lat: 35.179 }
+            ];
+            hospitals.forEach(h => {
+                const marker = new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat([h.lon, h.lat]))
+                });
+                const vectorSource = new ol.source.Vector({ features: [marker] });
+                const vectorLayer = new ol.layer.Vector({ source: vectorSource });
+                map.addLayer(vectorLayer);
+            });
+        });
+    }
+
+    // 메시지 전송
+    async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        displayMessage(message, 'user');
+        userInput.value = '';
+        userInput.focus();
+
+        const { chatbotResponse, audioUrl } = await getResponseAndTTS(message);
+        if (chatbotResponse) displayMessage(chatbotResponse, 'assistant', audioUrl);
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            sendMessage();
+            event.preventDefault();
+        }
+    });
+
+    // 음성 입력
+    let recognition;
+    let isRecording = false;
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'ko-KR';
+
+        recognition.onresult = (event) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+            }
+            if (finalTranscript) userInput.value = finalTranscript;
+        };
+
+        recognition.onstart = () => {
+            isRecording = true;
+            micButton.style.color = 'red';
+            micButton.textContent = '■';
+        };
+
+        recognition.onend = () => {
+            isRecording = false;
+            micButton.style.color = '#007aff';
+            micButton.textContent = '🎤';
+        };
+
+        micButton.addEventListener('click', () => {
+            if (isRecording) recognition.stop();
+            else recognition.start();
+        });
+    } else {
+        micButton.style.display = 'none';
+    }
+
+    // 초기화
+    displayMessage(doctors[selectedDoctor].greeting, "assistant");
+    initMap();
+    </script>
+</body>
+</html>

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정신과 상담 챗봇</title>
+    <!-- 파비콘 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👩‍⚕️</text></svg>">
+    <style>
+      /* 기존 CSS 유지 */
+      body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+          background-color: #f0f2f5;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 100vh;
+      }
+
+      .chat-container {
+          background-color: white;
+          border-radius: 15px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          width: 100%;
+          max-width: 400px;
+          padding: 20px;
+          box-sizing: border-box;
+          overflow-y: auto;
+          flex-grow: 1;
+          margin: 0 auto;
+      }
+
+      .message {
+          margin-bottom: 10px;
+          padding: 10px 12px;
+          border-radius: 18px;
+          word-wrap: break-word;
+          max-width: 70%;
+          display: inline-block;
+          clear: both;
+          position: relative;
+          transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+      }
+      .message.new-message {
+          transform: translateY(10px);
+          opacity: 0;
+      }
+      .message.new-message.show {
+          transform: translateY(0);
+          opacity: 1;
+      }
+
+      .user-message {
+          background-color: #007aff;
+          color: white;
+          float: right;
+          border-bottom-right-radius: 4px;
+      }
+
+      .assistant-message {
+          background-color: #e5e5ea;
+          color: black;
+          float: left;
+          border-bottom-left-radius: 4px;
+      }
+
+      .profile-header {
+          background-color: #f8f8f8;
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+          display: flex;
+          align-items: center;
+          position: sticky;
+          top: 0;
+          width: 100%;
+          max-width: 400px;
+          margin: 0 auto;
+          box-sizing: border-box;
+          z-index: 10;
+      }
+
+      .doctor-switch-buttons {
+          display: flex;
+          align-items: center;
+          position: absolute;
+          top: 50%;
+          left: 0;
+          width: 100%;
+          transform: translateY(-50%);
+          padding: 0 10px;
+          box-sizing: border-box;
+          justify-content: space-between;
+      }
+
+      .doctor-switch-button {
+          background-color: transparent;
+          border: none;
+          font-size: 24px;
+          color: #007aff;
+          cursor: pointer;
+          outline: none;
+          padding: 0;
+          width: 30px;
+          transition: transform 0.1s ease-in-out;
+      }
+
+      .doctor-switch-button:hover,
+      .doctor-switch-button:focus {
+          transform: scale(1.2);
+      }
+
+      .doctor-switch-button:disabled {
+          color: #ccc;
+          cursor: not-allowed;
+      }
+
+      .profile-info {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          flex-grow: 1;
+      }
+
+      .profile-image {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-bottom: 5px;
+      }
+
+      .profile-name {
+          font-size: 16px;
+          font-weight: bold;
+      }
+
+      .message-time,
+      #doctor-selection {
+          display: none;
+      }
+
+      #input-container {
+          display: flex;
+          padding: 10px;
+          background-color: #f0f0f0;
+          border-top: 1px solid #ccc;
+          position: sticky;
+          bottom: 0;
+          width: 100%;
+          max-width: 400px;
+          margin: 0 auto;
+          box-sizing: border-box;
+      }
+
+      #user-input {
+          flex-grow: 1;
+          border: none;
+          border-radius: 20px;
+          padding: 10px 12px;
+          margin-right: 5px;
+          outline: none;
+          background-color: white;
+          font-size: 15px;
+          transition: box-shadow 0.1s ease-in-out;
+      }
+
+      #user-input:focus {
+          box-shadow: 0 0 5px rgba(0, 122, 255, 0.5);
+      }
+
+      #send-button,
+      #mic-button {
+          background-color: #007aff;
+          color: white;
+          border: none;
+          border-radius: 20px;
+          padding: 10px 12px;
+          cursor: pointer;
+          outline: none;
+          font-size: 15px;
+          transition: background-color 0.2s ease-out, transform 0.1s ease-in-out;
+      }
+
+      #send-button:hover,
+      #send-button:focus,
+      #mic-button:hover,
+      #mic-button:focus {
+          background-color: #0056b3;
+          transform: translateY(-1px);
+      }
+
+      #mic-button {
+          background-color: transparent;
+          color: #007aff;
+          font-size: 24px;
+          margin-right: 5px;
+      }
+
+      #send-button {
+          font-size: 20px;
+          padding: 10px 14px;
+          line-height: 1;
+      }
+
+      audio {
+          width: 70%;
+          margin-top: 5px;
+          display: block;
+      }
+
+      .loading-indicator {
+          display: none;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          border: 4px solid #f3f3f3;
+          border-top: 4px solid #3498db;
+          border-radius: 50%;
+          width: 30px;
+          height: 30px;
+          animation: spin 2s linear infinite;
+      }
+
+      @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+      }
+    </style>
+</head>
+<body>
+    <div class="profile-header">
+        <button id="prev-doctor" class="doctor-switch-button">◀</button>
+        <div class="profile-info">
+            <img src="" alt="Doctor Image" id="profile-image" class="profile-image">
+            <div id="profile-name" class="profile-name"></div>
+        </div>
+        <button id="next-doctor" class="doctor-switch-button">▶</button>
+    </div>
+
+    <div class="chat-container">
+        <div id="chat-log"></div>
+        <div id="doctor-selection" style="display: none;">
+            <label>
+                <input type="radio" name="doctor" value="doctor1" checked>
+                Dr. Nova (nova)
+            </label>
+            <label>
+                <input type="radio" name="doctor" value="doctor2">
+                Dr. Shimmer (shimmer)
+            </label>
+            <label>
+                <input type="radio" name="doctor" value="doctor3">
+                Dr. Fable (fable)
+            </label>
+        </div>
+    </div>
+
+    <div id="input-container">
+        <button id="mic-button">🎤</button>
+        <input type="text" id="user-input" placeholder="메시지를 입력하세요..." autofocus>
+        <button id="send-button">➤</button>
+    </div>
+
+    <div class="loading-indicator" id="loading-indicator"></div>
+    <div id="waiting-message" style="display: none; text-align: center; margin-top: 10px; color: #999;">
+        Thinking...
+    </div>
+
+    <script>
+    const API_SERVER_URL = "https://kospi.duckdns.org";
+
+    const doctors = {
+        doctor1: { name: "Dr. Nova", voice: "nova", image: "doctor1.jpg", greeting: "안녕하세요! 저는 Dr. Nova입니다. 어떤 고민이 있으신가요?" },
+        doctor2: { name: "Dr. Shimmer", voice: "shimmer", image: "doctor2.jpg", greeting: "안녕하세요, Dr. Shimmer입니다. 편안하게 말씀해주세요." },
+        doctor3: { name: "Dr. Fable", voice: "fable", image: "doctor3.jpg", greeting: "안녕하세요! Dr. Fable입니다. 무슨 일이든 저에게 이야기해주세요." },
+    };
+    let selectedDoctor = "doctor1";
+    let currentDoctorIndex = 0;
+
+    const chatLog = document.getElementById('chat-log');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const micButton = document.getElementById('mic-button');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const waitingMessage = document.getElementById('waiting-message');
+    const profileImage = document.getElementById("profile-image");
+    const profileName = document.getElementById("profile-name");
+    const prevDoctorButton = document.getElementById("prev-doctor");
+    const nextDoctorButton = document.getElementById("next-doctor");
+
+    function getDoctorIndex(doctorKey) {
+        return Object.keys(doctors).indexOf(doctorKey);
+    }
+
+    function getDoctorKey(index) {
+        return Object.keys(doctors)[index];
+    }
+
+    async function loadInitialDoctor() {
+        try {
+            const response = await fetch(`${API_SERVER_URL}/initial_doctor`);
+            if (!response.ok) throw new Error(`Failed to load initial doctor: ${response.status}`);
+            const data = await response.json();
+            selectedDoctor = data.selected_doctor;
+            currentDoctorIndex = getDoctorIndex(selectedDoctor);
+            updateDoctorUI();
+            displayInitialMessage();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function updateDoctorUI() {
+        const doctor = doctors[selectedDoctor];
+        profileImage.src = doctor.image;
+        profileImage.alt = doctor.name;
+        profileName.textContent = doctor.name;
+        prevDoctorButton.disabled = false;
+        nextDoctorButton.disabled = false;
+    }
+
+    async function selectDoctor(doctorKey) {
+        try {
+            const response = await fetch(`${API_SERVER_URL}/select_doctor`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ selected_doctor: doctorKey }),
+            });
+            if (!response.ok) throw new Error(`Failed to select doctor: ${response.status}`);
+            selectedDoctor = doctorKey;
+            currentDoctorIndex = getDoctorIndex(selectedDoctor);
+            updateDoctorUI();
+            chatLog.innerHTML = '';
+            displayInitialMessage();
+        } catch (error) {
+            console.error("Error selecting doctor:", error);
+        }
+    }
+
+    prevDoctorButton.addEventListener("click", () => {
+        currentDoctorIndex = (currentDoctorIndex - 1 + Object.keys(doctors).length) % Object.keys(doctors).length;
+        selectDoctor(getDoctorKey(currentDoctorIndex));
+    });
+
+    nextDoctorButton.addEventListener("click", () => {
+        currentDoctorIndex = (currentDoctorIndex + 1) % Object.keys(doctors).length;
+        selectDoctor(getDoctorKey(currentDoctorIndex));
+    });
+
+    function displayInitialMessage() {
+        const doctor = doctors[selectedDoctor];
+        displayMessage(doctor.greeting, "assistant");
+    }
+
+    function displayMessage(message, role, audioUrl = null) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', role === 'user' ? 'user-message' : 'assistant-message');
+        messageDiv.textContent = message;
+
+        if (role === 'assistant' && audioUrl) {
+            const audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.src = audioUrl;
+            audioElement.autoplay = true;
+            messageDiv.appendChild(audioElement);
+        }
+        messageDiv.classList.add('new-message');
+        chatLog.appendChild(messageDiv);
+        chatLog.scrollTop = chatLog.scrollHeight;
+        void messageDiv.offsetWidth;
+        messageDiv.classList.add('show');
+    }
+
+    async function getResponseAndTTS(userMessage) {
+        try {
+            const chatResponse = await fetch(`${API_SERVER_URL}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_message: userMessage,
+                    selected_doctor: selectedDoctor,
+                })
+            });
+
+            if (!chatResponse.ok) throw new Error(`Chat API 호출 실패: ${chatResponse.status}`);
+            const chatData = await chatResponse.json();
+            const chatbotResponse = chatData.response;
+
+            let audioUrl = null;
+            if (isRecording) {
+                const ttsResponse = await fetch(`${API_SERVER_URL}/tts`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        user_message: chatbotResponse, // 챗봇 응답을 TTS로 변환
+                        selected_doctor: selectedDoctor,
+                    })
+                });
+
+                if (!ttsResponse.ok) throw new Error(`TTS API 호출 실패: ${ttsResponse.status}`);
+                const ttsData = await ttsResponse.json();
+                const audioData = base64ToArrayBuffer(ttsData.audio);
+                const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
+                audioUrl = URL.createObjectURL(audioBlob);
+            }
+
+            return { chatbotResponse, audioUrl };
+        } catch (error) {
+            console.error("응답 또는 TTS 오류:", error);
+            displayMessage("죄송합니다. 응답을 생성하는 데 문제가 발생했습니다.", "assistant");
+            return { chatbotResponse: null, audioUrl: null };
+        }
+    }
+
+    function base64ToArrayBuffer(base64) {
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    function showWaitingState(show) {
+        loadingIndicator.style.display = show ? 'block' : 'none';
+        waitingMessage.style.display = show ? 'block' : 'none';
+    }
+
+    async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        displayMessage(message, 'user');
+        userInput.value = '';
+        userInput.focus();
+
+        showWaitingState(true);
+        try {
+            const { chatbotResponse, audioUrl } = await getResponseAndTTS(message);
+            showWaitingState(false);
+            if (chatbotResponse) displayMessage(chatbotResponse, 'assistant', audioUrl);
+        } catch (error) {
+            console.error("메시지 전송 오류:", error);
+            showWaitingState(false);
+            displayMessage("죄송합니다. 응답을 생성하는 데 문제가 발생했습니다.", "assistant");
+        }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            sendMessage();
+            event.preventDefault();
+        }
+    });
+
+    let recognition;
+    let isRecording = false;
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'ko-KR';
+
+        recognition.onresult = (event) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                }
+            }
+            if (finalTranscript) userInput.value = finalTranscript;
+        };
+
+        recognition.onstart = () => {
+            isRecording = true;
+            micButton.style.color = 'red';
+            micButton.textContent = '■';
+        };
+
+        recognition.onend = () => {
+            isRecording = false;
+            micButton.style.color = '#007aff';
+            micButton.textContent = '🎤';
+        };
+
+        micButton.addEventListener('click', () => {
+            if (isRecording) recognition.stop();
+            else recognition.start();
+        });
+    } else {
+        micButton.style.display = 'none';
+    }
+
+    loadInitialDoctor();
+    </script>
+</body>
+</html>

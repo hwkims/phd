@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>😊 Mindful Chatbot</title>
+    <meta name="description" content="🧘‍♀️ A chatbot to help you with mindfulness.">
+    <meta name="keywords" content="mindfulness, chatbot, meditation">
+    <meta property="og:title" content="😊 Mindful Chatbot">
+    <meta property="og:description" content="🧘‍♀️ A chatbot to help you with mindfulness.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+    <!-- Chart.js, chartjs-chart-sunburst, and zoom plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sunburst@^2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@^2"></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff, #d1e1e9);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .chat-wrapper {
+            display: flex;
+            flex: 1;
+            justify-content: center;
+            position: relative;
+            align-items: stretch;
+
+        }
+
+        .profile-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            z-index: 10;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .doctor-switch-button {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: #6b7280;
+            cursor: pointer;
+            outline: none;
+            padding: 0;
+            margin: 0 10px;
+            transition: transform 0.1s ease-in-out;
+        }
+
+        .doctor-switch-button:hover, .doctor-switch-button:focus {
+            transform: scale(1.2);
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-image {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 5px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .profile-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4b5563;
+        }
+
+        .chat-container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            flex-grow: 1;
+            margin: 0 auto;
+            z-index: 1;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            max-width: 70%;
+            display: inline-block;
+            clear: both;
+            position: relative;
+            transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .message.new-message {
+            transform: translateY(10px);
+            opacity: 0;
+        }
+
+        .message.new-message.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .user-message {
+            background: #60a5fa;
+            color: white;
+            float: right;
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant-message {
+            background: #e5e7eb;
+            color: #374151;
+            float: left;
+            border-bottom-left-radius: 4px;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+            background: rgba(243, 244, 246, 0.9);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            z-index: 1;
+            border-radius: 0 0 15px 15px;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            margin-right: 5px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 15px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        #send-button, #mic-button {
+            background: #60a5fa;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            cursor: pointer;
+            outline: none;
+            font-size: 15px;
+        }
+
+        #mic-button {
+            background: transparent;
+            color: #60a5fa;
+            font-size: 24px;
+            margin-right: 5px;
+        }
+
+        #send-button {
+            font-size: 20px;
+            padding: 10px 14px;
+            line-height: 1;
+        }
+
+        audio {
+            width: 70%;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .panel {
+            position: sticky;
+            top: 20px;
+            height: auto;
+            max-height: calc(100vh - 40px);
+            width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            border-radius: 15px;
+            z-index: 2;
+        }
+
+        .left-panel {
+            left: 0;
+            margin-right: 20px;
+        }
+
+        .right-panel {
+            right: 0;
+            margin-left: 20px;
+        }
+
+        .chart-container {
+            margin-bottom: 20px;
+            /* For Sunburst - make sure it's big enough */
+            height: 300px;
+            width: 100%;
+        }
+
+        #analyze-button {
+            background-color: #87ceeb;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 177.78%; /* 9:16 aspect ratio */
+            overflow: hidden;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        #video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @media (max-width: 767px) {
+            .panel {
+                position: fixed;
+                top: 0;
+                max-height: 100vh;
+                height: 100%;
+                width: 80%;
+                margin: 0;
+                z-index: 1000;
+            }
+
+            .left-panel {
+                left: 0;
+                transform: translateX(-100%);
+            }
+
+            .right-panel {
+                right: 0;
+                transform: translateX(100%);
+            }
+
+            .left-panel.open, .right-panel.open {
+                transform: translateX(0);
+            }
+
+           .panel-toggle {
+                position: fixed;
+                top: 20px;
+                z-index: 2000;
+                background: rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(10px);
+                color: #4b5563;
+                border: none;
+                width: 60px;
+                height: 60px;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+           }
+
+            #left-toggle {
+                left: 10px;
+            }
+
+            #right-toggle {
+                right: 10px;
+            }
+
+            .chat-container {
+                border-radius: 15px;
+            }
+              .right-panel {
+                overflow-y: auto; /* Add scroll for right panel on mobile */
+            }
+             /* Sunburst on Mobile */
+            .chart-container {
+                height: 250px; /* Adjust as needed */
+            }
+        }
+
+        @media (min-width: 768px) {
+            .chat-wrapper {
+                flex-direction: row;
+                justify-content: center;
+                align-items: flex-start;
+                gap: 20px;
+            }
+
+            .profile-header, .chat-container, #input-container {
+                margin: 0 auto;
+            }
+
+            .chat-container {
+                flex: 0 0 400px;
+                max-width: 400px;
+                margin: 20px 0;
+            }
+
+            .panel-toggle {
+                display: none;
+            }
+
+            /* .chart-container  defined above */
+
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-wrapper">
+        <div id="left-panel" class="panel left-panel">
+            <button id="analyze-button">Analyze</button>
+            <div class="chart-container">
+                <canvas id="mental-sunburst"></canvas>
+            </div>
+        </div>
+
+        <div>
+            <div class="profile-header">
+                <button id="prev-doctor" class="doctor-switch-button">◀</button>
+                <div class="profile-info">
+                    <img src="doctor1.jpg" alt="Doctor Image" id="profile-image" class="profile-image">
+                    <div id="profile-name" class="profile-name"></div>
+                </div>
+                <button id="next-doctor" class="doctor-switch-button">▶</button>
+            </div>
+
+            <div class="chat-container">
+                <div id="chat-log"></div>
+            </div>
+
+            <div id="input-container">
+                <button id="mic-button">🎤</button>
+                <input type="text" id="user-input" placeholder="What's on your mind? 😊" autofocus>
+                <button id="send-button">➤</button>
+            </div>
+        </div>
+
+        <div id="right-panel" class="panel right-panel">
+            <div id="video-container">
+                <video loop autoplay muted playsinline>
+                    <source src="video.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+    </div>
+
+    <button id="left-toggle" class="panel-toggle">Analysis 😊</button>
+    <button id="right-toggle" class="panel-toggle">Video 🏥</button>
+
+    <script>
+        const API_SERVER_URL = "";
+        const doctors = {
+            doctor1: { name: "Dr. Nova", voice: "nova", image: "doctor1.jpg", greeting: "Hello! I'm Dr. Nova 😊 I'm here to chat about mental health.  I'm not a real doctor, so please consult a professional for serious issues. How are you feeling today?" },
+            doctor2: { name: "Dr. Shimmer", voice: "shimmer", image: "doctor2.jpg", greeting: "Hi there! I'm Dr. Shimmer! 😄 I'll listen to your concerns.  Remember, I'm an AI, not a real doctor, but I'll do my best to help.  What's troubling you?" },
+            doctor3: { name: "Dr. Fable", voice: "fable", image: "doctor3.jpg", greeting: "Greetings! I'm Dr. Fable 😊 I'm ready to offer comfort. As I'm not a medical professional, please check with a clinic for important matters. What's on your mind today?" },
+        };
+
+       const BASE_MENTAL_SCORES = {
+          "scores": {
+            "depression": "Depression", "anxiety": "Anxiety", "stress": "Stress", "life_satisfaction": "Life Satisfaction",
+            "mental_health": "Mental Health", "self_esteem": "Self-Esteem", "emotion_regulation": "Emotion Regulation", "resilience": "Resilience",
+            "sleep_quality": "Sleep Quality", "ptsd": "PTSD", "ocd": "OCD", "social_isolation": "Social Isolation",
+            "somatization": "Somatization", "eating_issues": "Eating Issues", "anger_control": "Anger Control", "substance_dependency": "Substance Dependency",
+            "extraversion": "Extraversion", "openness": "Openness", "conscientiousness": "Conscientiousness", "agreeableness": "Agreeableness",
+            "neuroticism": "Neuroticism", "self_control": "Self-Control", "optimism": "Optimism", "gratitude": "Gratitude",
+            "forgiveness": "Forgiveness", "humility": "Humility",
+            "creativity": "Creativity", "curiosity": "Curiosity", "open_mindedness": "Open-Mindedness", "love_of_learning": "Love of Learning",
+            "wisdom": "Wisdom", "bravery": "Bravery", "perseverance": "Perseverance", "honesty": "Honesty",
+            "zest": "Zest", "love": "Love", "kindness": "Kindness", "social_intelligence": "Social Intelligence",
+            "citizenship": "Citizenship", "fairness": "Fairness", "leadership": "Leadership", "forgiveness_strength": "Forgiveness (Strength)",
+            "humility_strength": "Humility (Strength)", "prudence": "Prudence", "self_regulation": "Self-Regulation", "appreciation_of_beauty": "Appreciation of Beauty",
+            "gratitude_strength": "Gratitude (Strength)", "hope": "Hope", "humor": "Humor", "spirituality": "Spirituality",
+            "cognitive_flexibility": "Cognitive Flexibility", "problem_solving": "Problem Solving", "decision_making": "Decision Making", "critical_thinking": "Critical Thinking",
+            "self_reflection": "Self-Reflection", "future_orientation": "Future Orientation", "goal_setting": "Goal Setting", "growth_mindset": "Growth Mindset",
+            "communication_skills": "Communication Skills", "empathy": "Empathy", "social_support": "Social Support", "conflict_resolution": "Conflict Resolution",
+            "intimacy": "Intimacy", "boundary_setting": "Boundary Setting"
+          }
+        };
+
+        let selectedDoctor = "doctor1";
+        let currentDoctorIndex = 0;
+        let chatHistory = [];
+        let mentalSunburstChart = null; // Store the chart instance
+
+        const chatLog = document.getElementById('chat-log');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const micButton = document.getElementById('mic-button');
+        const leftPanel = document.getElementById('left-panel');
+        const rightPanel = document.getElementById('right-panel');
+        const leftToggle = document.getElementById('left-toggle');
+        const rightToggle = document.getElementById('right-toggle');
+        const profileImage = document.getElementById("profile-image");
+        const profileName = document.getElementById("profile-name");
+        const prevDoctorButton = document.getElementById("prev-doctor");
+        const nextDoctorButton = document.getElementById("next-doctor");
+        const analyzeButton = document.getElementById("analyze-button");
+        const videoContainer = document.getElementById('video-container');
+        const videoElement = videoContainer.querySelector('video');
+        const sunburstCanvas = document.getElementById('mental-sunburst');
+
+        // Correctly register the Sunburst controller and elements:
+        Chart.register(ChartSunburst.SunburstController, ChartSunburst.SunburstElement, Chart.elements.ArcElement);
+
+
+        function getDoctorIndex(doctorKey) {
+            return Object.keys(doctors).indexOf(doctorKey);
+        }
+
+        function getDoctorKey(index) {
+            return Object.keys(doctors)[index];
+        }
+
+        document.addEventListener('click', function() {
+          if (videoElement.paused) {
+            videoElement.play();
+          }
+        }, { once: true });
+
+
+        async function loadInitialDoctor() {
+            try {
+                const response = await fetch(`${API_SERVER_URL}/initial_doctor`);
+                if (!response.ok) throw new Error(`Failed to load initial doctor: ${response.status}`);
+                const data = await response.json();
+                selectedDoctor = data.selected_doctor;
+                currentDoctorIndex = getDoctorIndex(selectedDoctor);
+                updateDoctorUI();
+                displayMessage(doctors[selectedDoctor].greeting, "assistant");
+                renderInitialSunburst();
+            } catch (error) {
+                console.error(error);
+                updateDoctorUI();
+                displayMessage(doctors[selectedDoctor].greeting, "assistant");
+                renderInitialSunburst();
+            }
+        }
+
+        function updateDoctorUI() {
+            const doctor = doctors[selectedDoctor];
+            profileImage.src = doctor.image;
+            profileImage.alt = doctor.name;
+            profileName.textContent = doctor.name;
+        }
+
+        async function selectDoctor(doctorKey) {
+            try {
+                const response = await fetch(`${API_SERVER_URL}/select_doctor`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ selected_doctor: doctorKey }),
+                });
+                if (!response.ok) throw new Error(`Failed to select doctor: ${response.status}`);
+
+                selectedDoctor = doctorKey;
+                currentDoctorIndex = getDoctorIndex(selectedDoctor);
+                updateDoctorUI();
+                chatLog.innerHTML = '';
+                chatHistory = [];
+                displayMessage(doctors[selectedDoctor].greeting, "assistant");
+                renderInitialSunburst();
+
+            } catch (error) {
+                console.error("Error selecting doctor:", error);
+            }
+        }
+
+        prevDoctorButton.addEventListener("click", () => {
+            currentDoctorIndex = (currentDoctorIndex - 1 + Object.keys(doctors).length) % Object.keys(doctors).length;
+            selectDoctor(getDoctorKey(currentDoctorIndex));
+        });
+
+        nextDoctorButton.addEventListener("click", () => {
+            currentDoctorIndex = (currentDoctorIndex + 1) % Object.keys(doctors).length;
+            selectDoctor(getDoctorKey(currentDoctorIndex));
+        });
+
+        leftToggle.addEventListener('click', () => {
+            leftPanel.classList.toggle('open');
+            if (rightPanel.classList.contains('open')) {
+                rightPanel.classList.remove('open');
+            }
+        });
+
+        rightToggle.addEventListener('click', () => {
+            rightPanel.classList.toggle('open');
+            if (leftPanel.classList.contains('open')) {
+                leftPanel.classList.remove('open');
+            }
+        });
+
+        function displayMessage(message, role, audioUrl = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', role === 'user' ? 'user-message' : 'assistant-message');
+            messageDiv.textContent = message;
+            if (role === 'assistant' && audioUrl) {
+                const audioElement = document.createElement('audio');
+                audioElement.controls = true;
+                audioElement.src = audioUrl;
+                audioElement.autoplay = true;
+                messageDiv.appendChild(audioElement);
+            }
+            messageDiv.classList.add('new-message');
+            chatLog.appendChild(messageDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            setTimeout(()=> messageDiv.classList.add('show'), 10);
+        }
+
+        async function getResponseAndTTS(userMessage) {
+            try {
+                const chatResponse = await fetch(`${API_SERVER_URL}/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_message: userMessage, selected_doctor: selectedDoctor }),
+                });
+                if (!chatResponse.ok) throw new Error(`Chat API call failed: ${chatResponse.status}`);
+
+                const chatData = await chatResponse.json();
+                const chatbotResponse = chatData.response;
+
+                chatHistory.push({ role: "user", content: userMessage }, { role: "assistant", content: chatbotResponse });
+
+                let audioUrl = null;
+                if (isRecording) {
+                    const ttsResponse = await fetch(`${API_SERVER_URL}/tts`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ user_message: chatbotResponse, selected_doctor: selectedDoctor }),
+                    });
+                    if (!ttsResponse.ok) throw new Error(`TTS API call failed: ${ttsResponse.status}`);
+                    const ttsData = await ttsResponse.json();
+                    const audioData = base64ToArrayBuffer(ttsData.audio);
+                    const audioBlob = new Blob([audioData], { type: "audio/mpeg" });
+                    audioUrl = URL.createObjectURL(audioBlob);
+                }
+
+                return { chatbotResponse, audioUrl };
+            } catch (error) {
+                console.error("Response or TTS error:", error);
+                displayMessage("Oops, something went wrong 😅 I'll try again!", "assistant");
+                return { chatbotResponse: null, audioUrl: null };
+            }
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+            return bytes.buffer;
+        }
+
+        function prepareSunburstData(scores) {
+            const data = {
+                labels: [],
+                datasets: [{
+                    label: 'Mental Health',
+                    data: [],
+                    backgroundColor: [],
+                }]
+            };
+
+            for (const key in scores) {
+                if (scores.hasOwnProperty(key)) {
+                  data.labels.push(BASE_MENTAL_SCORES.scores[key] || key); // Use Korean or original key
+                  data.datasets[0].data.push({
+                      label: BASE_MENTAL_SCORES.scores[key] || key, // Use Korean or original
+                      value: scores[key] || 50, // Use score or default 50
+                      backgroundColor: getRandomColor(),  //Function to get random color
+                  });
+                  data.datasets[0].backgroundColor.push(getRandomColor());
+                }
+            }
+            return data;
+        }
+
+
+        function getRandomColor() {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            return `rgba(${r}, ${g}, ${b}, 0.7)`;
+        }
+
+       function renderInitialSunburst() {
+            if (mentalSunburstChart) {
+                mentalSunburstChart.destroy();
+            }
+            const initialData = prepareSunburstData({}); // Empty initial data
+            const ctx = sunburstCanvas.getContext('2d');
+            mentalSunburstChart = new Chart(ctx, {
+                type: 'sunburst',  // Use the correct type
+                data: initialData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                          display: false, // Hide the legend
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const data = context.dataset.data[context.dataIndex];
+                                    return `${data.label}: ${data.value.toFixed(2)}`;
+                                }
+                            }
+                        },
+                        zoom: {  //Zoom plugin options
+                            zoom: {
+                                wheel: { enabled: true, },
+                                pinch: { enabled: true },
+                                mode: 'xy',
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'xy',
+                            }
+                        }
+                    }
+                },
+            });
+        }
+
+
+        async function updateMentalAnalysis() {
+            try {
+                const response = await fetch(`${API_SERVER_URL}/analyze_mental_health`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ chat_history: chatHistory })
+                });
+                if (!response.ok) throw new Error(`Mental Health API call failed: ${response.status}`);
+                const data = await response.json();
+
+                if (!data.scores) throw new Error("Analysis results don't have scores!");
+                const scores = data.scores;
+
+                const sunburstData = prepareSunburstData(scores);
+
+                // Update the chart *data*, not create a new chart
+                mentalSunburstChart.data.labels = sunburstData.labels;
+                mentalSunburstChart.data.datasets[0].data = sunburstData.datasets[0].data;
+                mentalSunburstChart.data.datasets[0].backgroundColor = sunburstData.datasets[0].backgroundColor;
+
+                mentalSunburstChart.update();
+
+
+            } catch (error) {
+                console.error("Mental health analysis error:", error);
+            }
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            displayMessage(message, 'user');
+            userInput.value = '';
+            userInput.focus();
+
+            const { chatbotResponse, audioUrl } = await getResponseAndTTS(message);
+            if (chatbotResponse) {
+                displayMessage(chatbotResponse, 'assistant', audioUrl);
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+                event.preventDefault();
+            }
+        });
+
+        analyzeButton.addEventListener('click', updateMentalAnalysis);
+
+        let recognition;
+        let isRecording = false;
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'ko-KR';
+
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    }
+                }
+                if (finalTranscript) {
+                    userInput.value = finalTranscript;
+                }
+            };
+
+            recognition.onstart = () => {
+                isRecording = true;
+                micButton.style.color = 'red';
+                micButton.textContent = '■';
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                micButton.style.color = '#60a5fa';
+                micButton.textContent = '🎤';
+            };
+
+            micButton.addEventListener('click', () => {
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+    } else {
+        micButton.style.display = 'none';
+    }
+
+    loadInitialDoctor();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정신과 상담 챗봇</title>
+    <!-- 파비콘 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👩‍⚕️</text></svg>">
+    <style>
+        /* CSS (아이폰 메신저 스타일, 반응형) */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100vh;
+        }
+
+        .chat-container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            flex-grow: 1;
+            margin: 0 auto; /* 상단 여백 제거 */
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            max-width: 70%;
+            display: inline-block;
+            clear: both;
+            position: relative;
+        }
+
+        .user-message {
+            background-color: #007aff; /* 아이폰 파란색 */
+            color: white;
+            float: right;
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant-message {
+            background-color: #e5e5ea;
+            color: black;
+            float: left;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* 상단 프로필 */
+        .profile-header {
+            background-color: #f8f8f8;
+            padding: 15px 10px; /* 패딩 조정 */
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            flex-direction: column; /* 세로 정렬 */
+            align-items: center; /* 가운데 정렬 */
+            position: sticky;
+            top: 0;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .profile-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+              margin-bottom: 5px;
+        }
+
+        .profile-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px; /* 버튼과의 간격 */
+        }
+
+        /* 의사 변경 버튼 컨테이너*/
+        .doctor-switch-buttons {
+            display: flex;
+            justify-content: space-between;
+            width: 100%; /* 수정: 컨테이너 너비 */
+            max-width: 200px;
+            margin-top: 5px; /* 이름과의 간격 */
+        }
+
+        .doctor-switch-button {
+            background-color: transparent;
+            border: none;
+            font-size: 24px;
+            color: #007aff;
+            cursor: pointer;
+            outline: none;
+            padding: 0; /* 버튼 패딩 제거 */
+            width: 30px; /* 버튼 너비 고정 */
+        }
+
+        .doctor-switch-button:disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .message-time,
+        .doctor-image,
+        #doctor-selection {
+            display: none; /* 숨김 */
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-top: 1px solid #ccc;
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            margin-right: 5px;
+            outline: none;
+            background-color: white;
+            font-size: 15px;
+        }
+
+        #send-button,
+        #mic-button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            cursor: pointer;
+            outline: none;
+            font-size: 15px;
+        }
+
+        #mic-button {
+            background-color: transparent;
+            color: #007aff;
+            font-size: 24px;
+        }
+
+        audio {
+            width: 70%;
+            margin-top: 5px;
+            display: block;
+        }
+
+        /* 로딩 인디케이터 */
+        .loading-indicator {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 페이드인 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .message {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- 상단 프로필 -->
+    <div class="profile-header">
+        <img src="" alt="Doctor Image" id="profile-image" class="profile-image">
+        <div id="profile-name" class="profile-name"></div>
+        <!-- 의사 변경 버튼 -->
+        <div class="doctor-switch-buttons">
+            <button id="prev-doctor" class="doctor-switch-button">◀</button>
+            <button id="next-doctor" class="doctor-switch-button">▶</button>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div id="chat-log"></div>
+
+        <!-- 의사 선택 (숨김) -->
+        <div id="doctor-selection" style="display: none;">
+             <label>
+                <input type="radio" name="doctor" value="doctor1" checked>
+                Dr. Nova (nova)
+            </label>
+            <label>
+                <input type="radio" name="doctor" value="doctor2">
+                Dr. Shimmer (shimmer)
+            </label>
+            <label>
+                <input type="radio" name="doctor" value="doctor3">
+                Dr. Fable (fable)
+            </label>
+        </div>
+    </div>
+
+    <!-- 입력창 -->
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="메시지를 입력하세요..." autofocus>
+        <button id="send-button">전송</button>
+        <button id="mic-button">🎤</button>
+    </div>
+
+    <!-- 로딩 인디케이터 -->
+    <div class="loading-indicator" id="loading-indicator"></div>
+
+    <script>
+    // API 서버 주소
+    const API_SERVER_URL = "https://kospi.duckdns.org";
+
+
+    // 의사 정보 (서버와 동기화)
+    const doctors = {
+        doctor1: { name: "Dr. Nova", voice: "nova", image: "doctor1.jpg" },
+        doctor2: { name: "Dr. Shimmer", voice: "shimmer", image: "doctor2.jpg" },
+        doctor3: { name: "Dr. Fable", voice: "fable", image: "doctor3.jpg" },
+    };
+    let selectedDoctor = "doctor1"; // 초기 의사
+    let currentDoctorIndex = 0; // 초기 인덱스
+
+    const chatLog = document.getElementById('chat-log');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const micButton = document.getElementById('mic-button');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const profileImage = document.getElementById("profile-image");
+    const profileName = document.getElementById("profile-name");
+    const prevDoctorButton = document.getElementById("prev-doctor");
+    const nextDoctorButton = document.getElementById("next-doctor");
+
+    // 의사 인덱스 가져오기
+    function getDoctorIndex(doctorKey) {
+        return Object.keys(doctors).indexOf(doctorKey);
+    }
+
+    // 의사 키 가져오기 (인덱스로)
+    function getDoctorKey(index) {
+        return Object.keys(doctors)[index];
+    }
+
+    // 초기 의사 정보 로드 및 UI 업데이트
+    async function loadInitialDoctor() {
+        try {
+            const response = await fetch(`${API_SERVER_URL}/initial_doctor`);
+            if (!response.ok) {
+                throw new Error(`초기 의사 정보 로드 실패: ${response.status}`);
+            }
+            const data = await response.json();
+            selectedDoctor = data.selected_doctor;
+            currentDoctorIndex = getDoctorIndex(selectedDoctor); // 인덱스 업데이트
+            updateDoctorUI();
+            displayInitialMessage();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    // 의사 UI 업데이트
+    function updateDoctorUI() {
+        const doctor = doctors[selectedDoctor];
+        profileImage.src = doctor.image;
+        profileImage.alt = doctor.name;
+        profileName.textContent = doctor.name;
+
+        // 이전/다음 버튼 활성화/비활성화 (무한 루프)
+        prevDoctorButton.disabled = false; // 항상 활성화
+        nextDoctorButton.disabled = false; // 항상 활성화
+    }
+
+    // 서버에 의사 변경 요청
+    async function selectDoctor(doctorKey) {
+      try {
+        const response = await fetch(`${API_SERVER_URL}/select_doctor`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ selected_doctor: doctorKey }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`의사 변경 실패: ${response.status}`);
+        }
+
+        selectedDoctor = doctorKey;
+        currentDoctorIndex = getDoctorIndex(selectedDoctor);
+        updateDoctorUI();
+        chatLog.innerHTML = ''; // 채팅 기록 초기화
+        displayInitialMessage(); // 새 의사 초기 메시지
+
+      } catch (error) {
+        console.error("의사 변경 오류:", error);
+      }
+    }
+
+    // 이전 의사 선택 (무한 루프)
+    prevDoctorButton.addEventListener("click", () => {
+        currentDoctorIndex = (currentDoctorIndex - 1 + Object.keys(doctors).length) % Object.keys(doctors).length;
+        selectDoctor(getDoctorKey(currentDoctorIndex));
+    });
+
+    // 다음 의사 선택 (무한 루프)
+    nextDoctorButton.addEventListener("click", () => {
+        currentDoctorIndex = (currentDoctorIndex + 1) % Object.keys(doctors).length;
+        selectDoctor(getDoctorKey(currentDoctorIndex));
+    });
+
+    // 초기 메시지 표시
+    function displayInitialMessage() {
+        displayMessage(`안녕하세요, 저는 ${doctors[selectedDoctor].name}입니다. 어떤 고민이 있으신가요?`, "assistant");
+    }
+
+    // 메시지 표시
+   function displayMessage(message, role, audioUrl = null) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', role === 'user' ? 'user-message' : 'assistant-message');
+      messageDiv.textContent = message;
+
+      if (role === 'assistant' && audioUrl) {
+          const audioElement = document.createElement('audio');
+          audioElement.controls = true;
+          audioElement.src = audioUrl;
+          messageDiv.appendChild(audioElement); // 메시지 div 안에 추가
+      }
+
+      chatLog.appendChild(messageDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // 챗봇 응답 (API 서버)
+    async function getChatbotResponse(userMessage) {
+        try {
+            const response = await fetch(`${API_SERVER_URL}/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    user_message: userMessage,
+                    selected_doctor: selectedDoctor,
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API 호출 실패: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.response;
+
+        } catch (error) {
+            console.error("챗봇 응답 가져오기 오류:", error);
+            return "죄송합니다. 응답을 생성하는 데 문제가 발생했습니다.";
+        }
+    }
+
+    // TTS (API 서버, Base64 디코딩)
+    async function getTextToSpeech(text) {
+        try {
+            const response = await fetch(`${API_SERVER_URL}/tts`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    user_message: text,
+                    selected_doctor: selectedDoctor,
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`TTS API 호출 실패: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const audioData = base64ToArrayBuffer(data.audio); // Base64 디코딩
+            const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
+            return URL.createObjectURL(audioBlob);
+
+        } catch (error) {
+            console.error("TTS 오류:", error);
+            return null;
+        }
+    }
+
+    // Base64 디코딩 함수
+    function base64ToArrayBuffer(base64) {
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    // 로딩 인디케이터
+    function showLoadingIndicator(show) {
+        loadingIndicator.style.display = show ? 'block' : 'none';
+    }
+
+    // 메시지 전송
+    async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        displayMessage(message, 'user');
+        userInput.value = '';
+
+        showLoadingIndicator(true);
+
+        const chatbotResponse = await getChatbotResponse(message);
+
+        // TTS 호출 및 오디오 URL 가져오기
+        const audioUrl = await getTextToSpeech(chatbotResponse);
+
+        // 챗봇 응답과 오디오 URL 함께 표시
+        displayMessage(chatbotResponse, 'assistant', audioUrl);
+
+        showLoadingIndicator(false);
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            sendMessage();
+            event.preventDefault();
+        }
+    });
+
+    // 음성 입력 (Web Speech API)
+    let recognition;
+    let isRecording = false;
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'ko-KR';
+
+        recognition.onresult = (event) => {
+             let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                }
+            }
+            if(finalTranscript){
+              userInput.value = finalTranscript;
+            }
+        };
+
+        recognition.onend = () => {
+          if(isRecording){
+            recognition.start();
+          }
+        }
+        micButton.addEventListener('click', () => {
+            if (isRecording) {
+                recognition.stop();
+                micButton.style.backgroundColor = 'transparent';
+                isRecording = false;
+            } else {
+                recognition.start();
+                micButton.style.backgroundColor = '#007aff';
+                isRecording = true;
+            }
+        });
+    } else {
+        micButton.style.display = 'none'; // Web Speech API 미지원
+    }
+
+    // 초기 의사 정보 로드 및 UI 업데이트
+    loadInitialDoctor();
+    </script>
+</body>
+</html>

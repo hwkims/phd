@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>😊 마음 챙김 챗봇</title>
+    <meta name="description" content="🧘‍♀️ 마음 챙김을 도와주는 챗봇입니다.">
+    <meta name="keywords" content="마음챙김, 챗봇, 심리, 건강">
+    <meta property="og:title" content="😊 마음 챙김 챗봇">
+    <meta property="og:description" content="🧘‍♀️ 마음 챙김을 도와주는 챗봇입니다.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <style>
+        /* CSS */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff, #d1e1e9);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .chat-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .profile-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            z-index: 10;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .doctor-switch-button {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: #6b7280;
+            cursor: pointer;
+            outline: none;
+            padding: 0;
+            margin: 0 10px;
+            transition: transform 0.1s ease-in-out;
+        }
+
+        .doctor-switch-button:hover, .doctor-switch-button:focus {
+            transform: scale(1.2);
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .profile-image {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 5px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .profile-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4b5563;
+        }
+
+        .chat-container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            margin: 0 auto;
+            z-index: 1;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            max-width: 70%;
+            display: inline-block;
+            clear: both;
+            position: relative;
+            transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .message.new-message {
+            transform: translateY(10px);
+            opacity: 0;
+        }
+
+        .message.new-message.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .user-message {
+            background: #60a5fa;
+            color: white;
+            float: right;
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant-message {
+            background: #e5e7eb;
+            color: #374151;
+            float: left;
+            border-bottom-left-radius: 4px;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+            background: rgba(243, 244, 246, 0.9);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            z-index: 1;
+            border-radius: 0 0 15px 15px;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            margin-right: 5px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 15px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        #send-button, #mic-button {
+            background: #60a5fa;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 12px;
+            cursor: pointer;
+            outline: none;
+            font-size: 15px;
+        }
+
+        #mic-button {
+            background: transparent;
+            color: #60a5fa;
+            font-size: 24px;
+            margin-right: 5px;
+        }
+
+        #send-button {
+            font-size: 20px;
+            padding: 10px 14px;
+            line-height: 1;
+        }
+
+        audio {
+            width: 70%;
+            margin-top: 5px;
+            display: block;
+        }
+
+        /* Panel Styles */
+        .panel-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+        .panel {
+            position: relative;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 40px);
+            width: 300px;
+        }
+        .charts-panel{
+            width: 300px;
+        }
+
+        #map {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            height: 500px;
+        }
+
+        h2 {
+            font-size: 18px;
+            color: #4b5563;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        #analyze-button {
+            background-color: #87ceeb;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            transition: background-color 0.3s ease;
+        }
+
+        #analyze-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #ad-contact-button, #summarize-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: fit-content;
+        }
+
+          /* Chart Styles */
+        .chart-container {
+            margin-bottom: -10px;
+            position: relative;
+            height: 140px;
+        }
+
+        .chart-title {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 15px;
+            color: #4b5563;
+            z-index: 3;
+            background-color: rgba(255,255,255,0.8);
+
+            border-radius: 5px;
+        }
+
+        .chartjs-size-monitor, .chartjs-size-monitor-expand, .chartjs-size-monitor-shrink {
+            position: static !important;
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 767px) {
+
+            .panel-toggle {
+                position: fixed;
+                top: 20px;
+                z-index: 2000;
+                background: rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(10px);
+                color: #4b5563;
+                border: none;
+                width: 60px;
+                height: 60px;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            #left-toggle {
+                left: 10px;
+            }
+            #right-toggle {
+                right: 10px;
+            }
+            .chat-container{
+                border-radius: 15px;
+            }
+
+            .charts-panel, .right-panel {
+                position: fixed;
+                top: 0;
+                height: 100vh;
+                width: 300px;
+                z-index: 1000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                overflow-y: auto;
+                margin: 0;
+            }
+
+            .charts-panel {
+                left: 0;
+                transform: translateX(-100%);
+            }
+
+            .right-panel{
+                right:0;
+            }
+
+            .charts-panel.open, .right-panel.open {
+                transform: translateX(0);
+            }
+            .chart-container {
+                height: 140px;
+            }
+        }
+
+        /* Desktop Styles */
+        @media (min-width: 768px) {
+            .chat-wrapper {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+                gap: 20px;
+            }
+
+            .profile-header, .chat-container, #input-container {
+                margin: 0;
+            }
+
+            .chat-container {
+                flex: 0 0 400px;
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+
+            .panel-container {
+                flex-direction: row;
+                gap: 20px;
+            }
+            .charts-panel{
+                max-height: none;
+                overflow-y: visible;
+            }
+
+            .panel-toggle {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-wrapper">
+        <!-- Left Panel (Charts) -->
+        <div class="charts-panel panel">
+            <h2>내 마음 상태 😊</h2>
+             <button id="analyze-button">분석!</button>
+            <div class="chart-container">
+                <div class="chart-title">관계-정서 (E/I)</div>
+                <canvas id="mental-graph1"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">정보-인지 (S/N)</div>
+                <canvas id="mental-graph2"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">가치-판단 (T/F)</div>
+                <canvas id="mental-graph3"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">실행-관리 (J/P)</div>
+                <canvas id="mental-graph4"></canvas>
+            </div>
+        </div>
+
+        <!-- Chat Area (Centered) -->
+        <div>
+            <div class="profile-header">
+                <button id="prev-doctor" class="doctor-switch-button">◀</button>
+                <div class="profile-info">
+                    <img src="doctor1.jpg" alt="Doctor Image" id="profile-image" class="profile-image">
+                    <div id="profile-name" class="profile-name"></div>
+                </div>
+                <button id="next-doctor" class="doctor-switch-button">▶</button>
+            </div>
+
+            <div class="chat-container">
+                <div id="chat-log"></div>
+            </div>
+
+            <div id="input-container">
+                <button id="mic-button">🎤</button>
+                <input type="text" id="user-input" placeholder="어떤 고민이 있나요? 😊" autofocus>
+                <button id="send-button">➤</button>
+            </div>
+        </div>
+
+        <!-- Right Panel (Map) -->
+        <div id="right-panel" class="panel right-panel">
+            <h2>근처 정신과 병원 🏥</h2>
+            <div id="map"></div>
+            <button id="summarize-button">요약</button>
+            <a href="tel:010-3330-6884" id="ad-contact-button">광고 문의</a>
+        </div>
+    </div>
+
+    <!-- Panel Toggle Buttons (for mobile) -->
+    <button id="left-toggle" class="panel-toggle">분석 😊</button>
+    <button id="right-toggle" class="panel-toggle">지도 🏥</button>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_SERVER_URL = "";  //  API 서버 URL
+        const doctors = {
+            doctor1: {
+                name: "Dr. Nova",
+                voice: "nova",
+                image: "doctor1.jpg",
+                greeting: "안녕하세요! 만나서 반가워요. 어떤 고민이든 편하게 말씀해 주세요. 함께 차근차근 이야기 나누고, 도움 드릴 수 있도록 할게요. 😊",
+            },
+            doctor2: {
+                name: "Dr. Shimmer",
+                voice: "shimmer",
+                image: "doctor2.jpg",
+                greeting: "안녕하세요~ 저는 Dr. Shimmer라고 해요! 😄 여기서 여러분의 이야기를 들어줄게요. 저는 AI라서 진짜 의사는 아니지만, 최대한 도움 드릴게요. 혹시 무슨 고민 있으신가요?",
+            },
+            doctor3: {
+                name: "Dr. Fable",
+                voice: "fable",
+                image: "doctor3.jpg",
+                greeting: "안녕! 저는 Dr. Fable이에요 😊 여러분의 마음을 따뜻하게 안아줄 준비가 되어 있답니다. 제가 전문 의사는 아니니, 중요한 건 꼭 병원에서 체크해주세요. 오늘 뭐가 마음에 걸리세요?",
+            },
+        };
+        // 각 지표에 대한 이름
+        const NEW_MENTAL_SCORES = {
+            "scores": {
+                "RE1": "사회적 상호작용 추구",
+                "RE2": "정서적 안정성",
+                "RE3": "관계 지향성",
+                "RE4": "자기표현 및 주장",
+                "IC1": "창의적 사고",
+                "IC2": "직관 및 통찰",
+                "IC3": "비판적 사고",
+                "IC4": "학습 및 지식 확장",
+                "VP1": "공감 및 정서적 교류",
+                "VP2": "윤리 및 도덕적 가치",
+                "VP3": "친사회적 행동",
+                "VP4": "개방성 및 수용성",
+                "EM1": "유연성 및 적응력",
+                "EM2": "자기주도성",
+                "EM3": "스트레스 대처",
+                "EM4": "자기성찰 및 성장"
+            }
+        };
+
+        let selectedDoctor = "doctor1";
+        let currentDoctorIndex = 0;
+        let chatHistory = [];
+        let shortMemory = []; // 최근 사용자 질문을 저장할 배열
+        const MAX_SHORT_MEMORY_LENGTH = 10; // 최대 길이
+        let mapInitialized = false;
+        let map;
+        let mentalCharts = [];
+
+        const chatLog = document.getElementById('chat-log');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const micButton = document.getElementById('mic-button');
+        const chartsPanel = document.getElementsByClassName("charts-panel")[0];
+        const rightPanel = document.getElementById('right-panel');
+        const leftToggle = document.getElementById('left-toggle');
+        const rightToggle = document.getElementById('right-toggle');
+        const profileImage = document.getElementById("profile-image");
+        const profileName = document.getElementById("profile-name");
+        const prevDoctorButton = document.getElementById("prev-doctor");
+        const nextDoctorButton = document.getElementById("next-doctor");
+        const analyzeButton = document.getElementById("analyze-button");
+        const summarizeButton = document.getElementById("summarize-button"); // 요약 버튼
+
+        // 의사 인덱스
+        function getDoctorIndex(doctorKey) {
+            return Object.keys(doctors).indexOf(doctorKey);
+        }
+
+        // 의사 키
+        function getDoctorKey(index) {
+            return Object.keys(doctors)[index];
+        }
+
+        // 초기 의사
+        async function loadInitialDoctor() {
+            try {
+                const response = await fetch(`${API_SERVER_URL}/initial_doctor`);
+                if (!response.ok) throw new Error(`Failed to load initial doctor: ${response.status}`);
+                const data = await response.json();
+                selectedDoctor = data.selected_doctor;
+                currentDoctorIndex = getDoctorIndex(selectedDoctor);
+                updateDoctorUI();
+                displayMessage(doctors[selectedDoctor].greeting, "assistant"); // 인사말 표시
+                renderInitialGraph();
+
+            } catch (error) {
+                console.error(error);
+                updateDoctorUI();
+                displayMessage(doctors[selectedDoctor].greeting, "assistant"); // 인사말
+                renderInitialGraph();
+            }
+        }
+
+        // UI
+        function updateDoctorUI() {
+            const doctor = doctors[selectedDoctor];
+            profileImage.src = doctor.image;
+            profileImage.alt = doctor.name;
+            profileName.textContent = doctor.name;
+        }
+
+        // 의사 선택 (API 호출)
+        async function selectDoctor(doctorKey) {
+            try {
+                const response = await fetch(`${API_SERVER_URL}/select_doctor`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-User-ID": userId, // 사용자 ID
+                    },
+                    body: JSON.stringify({ selected_doctor: doctorKey }),
+                });
+                if (!response.ok) throw new Error(`Failed to select doctor: ${response.status}`);
+
+                selectedDoctor = doctorKey;
+                currentDoctorIndex = getDoctorIndex(selectedDoctor);
+                updateDoctorUI();
+                // chatHistory, shortMemory는 유지.  새 인사말 없음.
+            } catch (error) {
+                console.error("Error selecting doctor:", error);
+            }
+        }
+
+        // 의사 변경 버튼
+        prevDoctorButton.addEventListener("click", () => {
+            currentDoctorIndex = (currentDoctorIndex - 1 + Object.keys(doctors).length) % Object.keys(doctors).length;
+            selectDoctor(getDoctorKey(currentDoctorIndex));
+        });
+        nextDoctorButton.addEventListener("click", () => {
+            currentDoctorIndex = (currentDoctorIndex + 1) % Object.keys(doctors).length;
+            selectDoctor(getDoctorKey(currentDoctorIndex));
+        });
+
+        // 메뉴
+        leftToggle.addEventListener('click', () => {
+            chartsPanel.classList.toggle('open');
+            if (rightPanel.classList.contains('open')) {
+                rightPanel.classList.remove('open');
+            }
+        });
+        rightToggle.addEventListener('click', () => {
+            rightPanel.classList.toggle('open');
+            if (chartsPanel.classList.contains('open')) {
+                chartsPanel.classList.remove('open');
+            }
+            if (!mapInitialized && rightPanel.classList.contains('open')) {
+                initMap();
+                mapInitialized = true;
+            }
+        });
+
+        // 메시지 표시
+        function displayMessage(message, role, audioUrl = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', role === 'user' ? 'user-message' : 'assistant-message');
+            messageDiv.textContent = message;
+
+            if (role === 'assistant' && audioUrl) {
+                const audioElement = document.createElement('audio');
+                audioElement.controls = true;
+                audioElement.src = audioUrl;
+                audioElement.autoplay = true;
+                messageDiv.appendChild(audioElement);
+            }
+            messageDiv.classList.add('new-message');
+            chatLog.appendChild(messageDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            setTimeout(()=> messageDiv.classList.add('show'), 10);
+        }
+
+        // 메시지, 오디오 가져오기
+        async function getResponseAndTTS(userMessage) {
+            try {
+                const chatResponse = await fetch(`${API_SERVER_URL}/chat`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-User-ID": userId,
+                    },
+                    body: JSON.stringify({
+                        user_message: userMessage,
+                        selected_doctor: selectedDoctor,
+                        short_memory: shortMemory,
+                    }),
+                });
+                if (!chatResponse.ok) throw new Error(`Chat API call failed: ${chatResponse.status}`);
+
+                const chatData = await chatResponse.json();
+                const chatbotResponse = chatData.response;
+
+                let audioUrl = null;
+                if(isRecording){
+                    const ttsResponse = await fetch(`${API_SERVER_URL}/tts`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-User-ID": userId,
+                        },
+                        body: JSON.stringify({
+                            user_message: chatbotResponse,  // TTS는 챗봇 응답
+                            selected_doctor: selectedDoctor
+                        }),
+                    });
+                    if (!ttsResponse.ok) throw new Error(`TTS API call failed: ${ttsResponse.status}`);
+                    const ttsData = await ttsResponse.json();
+                    const audioData = base64ToArrayBuffer(ttsData.audio);
+                    const audioBlob = new Blob([audioData], { type: "audio/mpeg" });
+                    audioUrl = URL.createObjectURL(audioBlob);
+                }
+                return { chatbotResponse, audioUrl };
+
+            } catch (error) {
+                console.error("Error getting response or TTS:", error);
+                displayMessage("앗, 뭔가 잘못됐어요 😅 다시 시도해볼게요!", "assistant");
+                return { chatbotResponse: null, audioUrl: null };
+            }
+        }
+
+        // Base64 -> ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+          // 초기 그래프
+        function renderInitialGraph() {
+            const scores = NEW_MENTAL_SCORES.scores;
+            const labels = Object.values(scores);
+            const dataValues = Object.keys(scores).map(key => 50); // All 50
+            const chunkSize = Math.ceil(labels.length / 4);
+            const groupNames = ["관계-정서 (E/I)", "정보-인지 (S/N)", "가치-판단 (T/F)", "실행-관리 (J/P)"];
+
+            const backgroundColors = [
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(255, 206, 86, 0.7)'
+            ];
+
+            mentalCharts.forEach(chart => chart.destroy());
+            mentalCharts = [];
+
+            for (let i = 0; i < 4; i++) {
+              const canvasId = `mental-graph${i + 1}`;
+              const ctx = document.getElementById(canvasId).getContext('2d');
+
+              const dataset = {
+                label: groupNames[i],
+                data: dataValues.slice(i * chunkSize, (i + 1) * chunkSize),
+                backgroundColor: backgroundColors[i % backgroundColors.length],
+                borderColor: backgroundColors[i % backgroundColors.length].replace('0.7', '1'),
+                borderWidth: 1
+              };
+
+              const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels: labels.slice(i * chunkSize, (i + 1) * chunkSize).map(() => ""),
+                  datasets: [dataset]
+                },
+                options: {
+                  indexAxis: 'y',
+                  scales: {
+                    x: { beginAtZero: true, max: 100, grid: { color: 'rgba(0, 0, 0, 0.1)' } },
+                    y: { grid: { display: false }, ticks: { display: false } }
+                  },
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          const index = context.dataIndex + i * chunkSize;
+                          return `${labels[index]}: ${context.raw}`;
+                        }
+                      }
+                    }
+                  },
+                  layout: { padding: { left: 10, right: 20, top: 10, bottom: 30 } }
+                }
+              });
+              mentalCharts.push(chart);
+            }
+          }
+
+        // 그래프 업데이트
+        async function updateMentalAnalysis() {
+            analyzeButton.disabled = true;
+            const spinner = document.createElement('span');
+            spinner.classList.add('loading-spinner');
+            analyzeButton.appendChild(spinner);
+
+            try {
+                const response = await fetch(`${API_SERVER_URL}/analyze_mental_health`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-User-ID": userId,
+                    },
+                    body: JSON.stringify({ chat_history: chatHistory }),
+                });
+                if (!response.ok) throw new Error(`Mental Health API call failed: ${response.status}`);
+
+                const data = await response.json();
+                if (!data.scores) throw new Error("Analysis result does not contain 'scores'!");
+
+                const scores = data.scores;
+                const labels = Object.values(NEW_MENTAL_SCORES.scores);
+                const dataValues = Object.keys(NEW_MENTAL_SCORES.scores).map(key => (scores[key] + 50) || 50);
+                const chunkSize = Math.ceil(labels.length / 4);
+                const groupNames = ["관계-정서 (E/I)", "정보-인지 (S/N)", "가치-판단 (T/F)", "실행-관리 (J/P)"];
+
+                const backgroundColors = [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(255, 206, 86, 0.7)'
+                ];
+
+                mentalCharts.forEach(chart => chart.destroy());
+                mentalCharts = [];
+
+                for (let i = 0; i < 4; i++) {
+                    const canvasId = `mental-graph${i + 1}`;
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+                    const dataset = {
+                        label: groupNames[i],
+                        data: dataValues.slice(i * chunkSize, (i + 1) * chunkSize),
+                        backgroundColor: backgroundColors[i % backgroundColors.length],
+                        borderColor: backgroundColors[i % backgroundColors.length].replace('0.7', '1'),
+                        borderWidth: 1
+                    };
+
+                    const chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels.slice(i * chunkSize, (i + 1) * chunkSize).map(() => ""),
+                            datasets: [dataset]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                                    ticks: {
+                                        color: '#4b5563',
+                                        font: { size: 14 }
+                                    }
+                                },
+                                y: {
+                                    grid: { display: false },
+                                    ticks: { display: false }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const index = context.dataIndex + i * chunkSize;
+                                            return `${labels[index]}: ${context.raw}`;
+                                        }
+                                    }
+                                }
+                            },
+                            layout: {
+                                padding: { left: 10, right: 20, top: 10, bottom: 30 }
+                            }
+                        }
+                    });
+                    mentalCharts.push(chart);
+                }
+
+            } catch (error) {
+                console.error("Error updating mental analysis:", error);
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.removeChild(spinner);
+            }
+        }
+
+                // 지도 초기화
+        function initMap() {
+            map = L.map('map').setView([37.358694, 127.104994], 15); // 분당 내마음 정신건강의학과
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            L.marker([37.358694, 127.104994]).addTo(map)
+                .bindPopup("분당 내마음 정신건강의학과 의원")
+                .openPopup();
+
+            navigator.geolocation.getCurrentPosition(
+                position => { // Success
+                    const userLat = position.coords.latitude;
+                    const userLon = position.coords.longitude;
+                    map.setView([userLat, userLon], 15);
+                    L.marker([userLat, userLon]).addTo(map).bindPopup("현재 위치 😊").openPopup();
+                },
+                error => { // Error
+                    console.error("Geolocation error:", error);
+                    // 위치 정보 가져오기 실패 시 사용자에게 알림 (선택 사항)
+                    alert("위치 정보를 가져올 수 없습니다. 브라우저 설정에서 위치 정보 접근 권한을 확인해주세요.");
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            );
+        }
+
+        // 요약 요청
+        async function requestSummary() {
+            try {
+                const response = await fetch(`${API_SERVER_URL}/summarize_chat`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-User-ID": userId, // 사용자 ID
+                    },
+                    body: JSON.stringify({ chat_history: chatHistory }),
+                });
+
+                if (!response.ok) throw new Error(`Summarize API call failed: ${response.status}`);
+
+                const data = await response.json();
+                displayMessage(`**요약:** ${data.summary}`, 'assistant');
+                displayMessage(`**주요 감정:** ${data.main_emotions.join(', ')}`, 'assistant');
+                displayMessage(`**주요 주제:** ${data.main_topics.join(', ')}`, 'assistant');
+
+            } catch (error) {
+                console.error("Error requesting summary:", error);
+                displayMessage("요약을 가져오는 데 실패했습니다.", "assistant");
+            }
+        }
+
+        // 메시지 전송
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            displayMessage(message, 'user');
+            userInput.value = '';
+            userInput.focus();
+
+            // chatHistory, shortMemory 업데이트
+            chatHistory.push({ role: 'user', content: message });
+            shortMemory.push(message);
+            if (shortMemory.length > MAX_SHORT_MEMORY_LENGTH) {
+                shortMemory.shift(); // FIFO
+            }
+
+            const { chatbotResponse, audioUrl } = await getResponseAndTTS(message);
+            if (chatbotResponse) {
+                displayMessage(chatbotResponse, 'assistant', audioUrl);
+                chatHistory.push({ role: 'assistant', content: chatbotResponse });
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+
+        userInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+                event.preventDefault();
+            }
+        });
+
+        analyzeButton.addEventListener('click', updateMentalAnalysis);
+        summarizeButton.addEventListener('click', requestSummary); // 요약 버튼
+
+        // 음성 인식
+        let recognition;
+        let isRecording = false;
+        let finalTranscript = ''; // 음성 인식 결과 누적
+        let silenceTimer;
+        const SILENCE_TIMEOUT = 2000; // 자동 전송 시간 (2초)
+
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'ko-KR';
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                finalTranscript = ''; // 누적
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                // "전송" 명령어 처리
+                if (finalTranscript.includes("전송")) {
+                    const messageToSend = finalTranscript.replace("전송", "").trim();
+                    if (messageToSend) {
+                        userInput.value = messageToSend;
+                        sendMessage();
+                    }
+                    recognition.stop();
+                    return;
+                }
+
+                userInput.value = finalTranscript + interimTranscript;
+
+                // 자동 전송 타이머
+                clearTimeout(silenceTimer);
+                silenceTimer = setTimeout(() => {
+                    if (isRecording && userInput.value.trim() !== '') {
+                        sendMessage();
+                        recognition.stop();  // 자동 전송 후 종료
+                    }
+                }, SILENCE_TIMEOUT);
+
+            };
+
+            recognition.onstart = () => {
+                isRecording = true;
+                micButton.style.color = 'red';
+                micButton.textContent = '■';
+                finalTranscript = ''; // 초기화
+                userInput.value = '';
+                userInput.placeholder = "말씀하세요...";
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                micButton.style.color = '#60a5fa';
+                micButton.textContent = '🎤';
+                userInput.placeholder = "어떤 고민이 있나요? 😊";
+                 if (finalTranscript.trim() !== '') {
+                      userInput.value = finalTranscript.trim();
+                 }
+                clearTimeout(silenceTimer); // 타이머 제거
+            };
+
+            micButton.addEventListener('click', () => {
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+        } else {
+            micButton.style.display = 'none';
+        }
+
+        // 초기 설정
+        let userId = localStorage.getItem("userId"); // 사용자 ID (로컬 스토리지)
+        if (!userId) {
+            userId = crypto.randomUUID();
+            localStorage.setItem("userId", userId);
+        }
+
+        loadInitialDoctor();
+        if (window.innerWidth >= 768) {
+          initMap();
+          mapInitialized = true;
+        }
+    </script>
+</body>
+</html>
