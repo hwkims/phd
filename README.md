@@ -1,5 +1,7 @@
 ![image](https://github.com/user-attachments/assets/dbd711bf-b004-4c38-88ca-d6071473ff1c)
-
+![다운로드 (1)](https://github.com/user-attachments/assets/f10c749e-f7e2-4d20-87fb-420b1e2428b6)
+![다운로드](https://github.com/user-attachments/assets/290f5243-1faa-45b7-9ef4-436464bbc53a)
+https://kospi.duckdns.org/
 
 ## 🧠 마음챙김 챗봇 (Mindful Chatbot) - 팀 "포옹" 🤗
 
