@@ -17,7 +17,7 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # 로깅 설정
-logger = logging.getLogger("uvicorn.error")  # uvicorn 로거 사용
+logger = logging.getLogger("uvicorn.error")
 
 
 app = FastAPI()
@@ -70,6 +70,11 @@ class MentalHealthRequest(BaseModel):
 class SummarizeChatRequest(BaseModel):
     chat_history: list
 
+class TTSRequest(BaseModel):  # TTS를 위한 별도 모델
+    text: str
+    selected_doctor: str
+
+
 @app.post("/chat")
 async def chat(request: ChatRequest, http_request: Request):
     logger.info(f"Received chat request: {request}")
@@ -79,7 +84,7 @@ async def chat(request: ChatRequest, http_request: Request):
             raise HTTPException(status_code=400, detail="User ID is required")
 
         if len(request.short_memory) > 10:
-            logger.warning(f"short_memory length exceeds limit. Truncating. user_id={user_id}")
+            logger.warning(f"short_memory length exceeds limit.  Truncating. user_id={user_id}")
             request.short_memory = request.short_memory[-10:]
 
         messages = [
@@ -91,17 +96,17 @@ async def chat(request: ChatRequest, http_request: Request):
 
                 다음은 당신의 역할 수행에 도움이 되는 지침입니다.
 
-                1. **공감과 경청**: 환자의 말에 주의 깊게 귀 기울이고, 그들의 감정에 공감하는 태도를 보이세요.
-                2. **정확한 진단**: 환자의 증상, 과거 병력, 생활 습관 등 다양한 정보를 종합하여 정확한 진단을 내리세요.
-                   * DSM-5 (정신질환 진단 및 통계 편람 제5판) 또는 ICD-11 (국제질병분류 제11차 개정판)에 기반한 진단명을 언급할 수 있습니다.
-                3. **치료 계획**:  환자에게 가장 적합한 치료 계획을 수립하고, 그 내용을 상세히 설명해주세요.
-                   * 약물 치료, 심리 치료(인지 행동 치료, 대인 관계 치료 등), 생활 습관 개선 등 다양한 치료 옵션을 고려.
-                4. **명확한 의사소통**: 환자가 이해하기 쉬운 용어를 사용하고, 복잡한 의학 정보는 풀어서 설명해주세요.
-                5. **비판단적 태도**: 환자를 비난하거나 평가하지 않고, 그들의 어려움을 이해하려는 자세를 가지세요.
-                6. **희망과 격려**: 환자가 긍정적인 마음으로 치료에 임할 수 있도록 격려하고, 회복에 대한 희망을 심어주세요.
-                7. **비밀 유지**: 환자와의 대화 내용은 철저히 비밀로 유지하고, 개인 정보 보호에 유의하세요.
-                8. **전문가의 한계 인지**: 당신은 AI 챗봇이므로, 실제 의사를 대체할 수 없습니다. 위급한 상황이거나, 추가적인 의학적 도움이 필요할 경우, 반드시 전문가와 상담하도록 안내하세요.
-                9. **최신 지식**:  정신 건강 분야의 최신 지견을 지속적으로 학습하고, 대화에 반영하세요.
+                1.  **공감과 경청**: 환자의 말에 주의 깊게 귀 기울이고, 그들의 감정에 공감하는 태도를 보이세요.
+                2.  **정확한 진단**: 환자의 증상, 과거 병력, 생활 습관 등 다양한 정보를 종합하여 정확한 진단을 내리세요.
+                    *   DSM-5 (정신질환 진단 및 통계 편람 제5판) 또는 ICD-11 (국제질병분류 제11차 개정판)에 기반한 진단명을 언급할 수 있습니다.
+                3.  **치료 계획**:  환자에게 가장 적합한 치료 계획을 수립하고, 그 내용을 상세히 설명해주세요.
+                    *   약물 치료, 심리 치료(인지 행동 치료, 대인 관계 치료 등), 생활 습관 개선 등 다양한 치료 옵션을 고려.
+                4.  **명확한 의사소통**: 환자가 이해하기 쉬운 용어를 사용하고, 복잡한 의학 정보는 풀어서 설명해주세요.
+                5.  **비판단적 태도**: 환자를 비난하거나 평가하지 않고, 그들의 어려움을 이해하려는 자세를 가지세요.
+                6.  **희망과 격려**: 환자가 긍정적인 마음으로 치료에 임할 수 있도록 격려하고, 회복에 대한 희망을 심어주세요.
+                7.  **비밀 유지**: 환자와의 대화 내용은 철저히 비밀로 유지하고, 개인 정보 보호에 유의하세요.
+                8.  **전문가의 한계 인지**: 당신은 AI 챗봇이므로, 실제 의사를 대체할 수 없습니다.  위급한 상황이거나, 추가적인 의학적 도움이 필요할 경우, 반드시 전문가와 상담하도록 안내하세요.
+                9.  **최신 지식**:  정신 건강 분야의 최신 지견을 지속적으로 학습하고, 대화에 반영하세요.
                 10. **윤리적 책임**:  환자의 안전과 복지를 최우선으로 생각하고, 윤리적인 방식으로 대화를 이끌어 가세요.
                 11. **이름, 중요 정보 기억**: 대화 중에 언급된 환자의 이름, 중요한 정보(과거 병력, 현재 복용 중인 약, 알레르기 등)는 반드시 기억하고, 필요할 때 다시 언급하여 대화의 맥락을 유지하세요.
                 12. **최근 질문 활용**: 다음은 환자가 최근에 했던 질문 목록입니다:
@@ -125,8 +130,8 @@ async def chat(request: ChatRequest, http_request: Request):
             else:
                 raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
         except openai.RateLimitError as e:
-             logger.error(f"OpenAI RateLimitError: {e}", exc_info=True)
-             raise HTTPException(status_code=429, detail="OpenAI API rate limit exceeded. Please try again later.")
+            logger.error(f"OpenAI RateLimitError: {e}", exc_info=True)
+            raise HTTPException(status_code=429, detail="OpenAI API rate limit exceeded. Please try again later.")
         except openai.OpenAIError as e:
             logger.error(f"OpenAI API error: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
@@ -139,8 +144,6 @@ async def chat(request: ChatRequest, http_request: Request):
         chatbot_response = re.sub(r"(면책 조항:|Disclaimer:)", r"**\1**", chatbot_response)
         chatbot_response = re.sub(r"(주의:|Note:|Caution:)", r"**\1**", chatbot_response)
 
-        await asyncio.sleep(0.5)
-
         return JSONResponse({"response": chatbot_response, "user_id": user_id})
 
     except HTTPException as http_exc:
@@ -150,27 +153,29 @@ async def chat(request: ChatRequest, http_request: Request):
     except Exception as e:
         logger.error(f"Unexpected error in /chat: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
-
+    
 @app.post("/tts")
-async def text_to_speech(request: ChatRequest, http_request: Request):
+async def text_to_speech(request: TTSRequest, http_request: Request):
     logger.info(f"Received TTS request: {request}")
     user_id = http_request.headers.get("X-User-ID")
     if not user_id:
         raise HTTPException(status_code=400, detail="User ID is required")
+
+    if request.selected_doctor not in doctors:
+        raise HTTPException(status_code=400, detail="Invalid doctor selected")
+
     try:
         response = await client.audio.speech.create(
             model="tts-1",
             voice=doctors[request.selected_doctor]["voice"],
-            input=request.user_message,
+            input=request.text,  # 올바른 text 필드 사용
         )
         audio_base64 = base64.b64encode(response.content).decode("utf-8")
-        await asyncio.sleep(0.5)
         return JSONResponse({"audio": audio_base64})
 
     except openai.OpenAIError as e:
         logger.error(f"OpenAI API error in /tts: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
-
     except Exception as e:
         logger.error(f"Error in /tts: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -216,7 +221,7 @@ async def analyze_mental_health(request: MentalHealthRequest, http_request: Requ
         EM4 (자기성찰 및 성장): 자신의 행동, 생각, 감정을 객관적으로 돌아보는 정도. (-50: 자기합리화, +50: 자기성찰)
 
         대화 기록:
-        """ + json.dumps(chat_history) # JSON 형식으로 변환
+        """ + json.dumps(chat_history)  # JSON 형식으로 변환
 
         try:
             response = await client.chat.completions.create(
@@ -262,7 +267,6 @@ async def analyze_mental_health(request: MentalHealthRequest, http_request: Requ
                     logger.warning(f"'{key}' 지표 처리 오류, 기본값 0 사용")
                     scores[key] = 0
 
-            await asyncio.sleep(0.5)
             return JSONResponse(content={"scores": scores})
 
         except (json.JSONDecodeError, ValueError) as e:
@@ -322,7 +326,7 @@ async def summarize_chat(request: SummarizeChatRequest, http_request: Request):
             logger.info(f"OpenAI summarize response: {response}")
         except openai.OpenAIError as e:
             logger.error(f"OpenAI error in /summarize_chat: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail = f"OpenAI API error: {e}")
+            raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
 
         result = json.loads(response.choices[0].message.content)
 
@@ -334,8 +338,6 @@ async def summarize_chat(request: SummarizeChatRequest, http_request: Request):
             main_emotions.append("알 수 없음")
         while len(main_topics) < 3:
             main_topics.append("알 수 없음")
-
-        await asyncio.sleep(0.5)
 
         return JSONResponse(content={
             "summary": summary,
@@ -350,7 +352,6 @@ async def summarize_chat(request: SummarizeChatRequest, http_request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 @app.post("/select_doctor")
 async def select_doctor_api(request: DoctorRequest, http_request: Request):
     logger.info(f"Received select doctor request: {request}")
@@ -362,12 +363,11 @@ async def select_doctor_api(request: DoctorRequest, http_request: Request):
     return JSONResponse({"message": f"Doctor changed to {selected_doctor}"})
 
 
-
 @app.get("/initial_doctor")
-async def get_initial_doctor(http_request:Request):
+async def get_initial_doctor(http_request: Request):
     user_id = http_request.headers.get("X-User-ID")
     if not user_id:
-         return JSONResponse({"selected_doctor": "doctor1"})
+        return JSONResponse({"selected_doctor": "doctor1"})
     return JSONResponse({"selected_doctor": "doctor1"})
 
 @app.get("/", response_class=FileResponse)
