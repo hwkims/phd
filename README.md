@@ -2,6 +2,9 @@
 
 https://kospi.duckdns.org/
 
+https://www.youtube.com/watch?v=Un4Q2AVjW8g
+
+
 ## 🧠 마음챙김 챗봇 (Mindful Chatbot) - 팀 "포옹" 🤗
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/hwkims/phd) <!-- 나중에 CI/CD 설정 후 실제 배지 URL로 변경 -->
