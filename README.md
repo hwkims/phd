@@ -1,6 +1,8 @@
 ![image](https://github.com/user-attachments/assets/dbd711bf-b004-4c38-88ca-d6071473ff1c)
 
-https://kospi.duckdns.org/
+#https://kospi.duckdns.org/
+서버는 현재 죽음 디자인보기.
+https://hwkims.github.io/phd/static/index.html
 
 https://www.youtube.com/watch?v=Un4Q2AVjW8g
 
